@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Impact Arcade - Educational Game</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            overflow-x: hidden;
+        }
+        * {
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const AsteroidArcade = () => {
+          const [gameState, setGameState] = useState('setup');
+          const [score, setScore] = useState(0);
+          const [asteroidSize, setAsteroidSize] = useState(50);
+          const [asteroidType, setAsteroidType] = useState('rock');
+          const [angle, setAngle] = useState(45);
+          const [speed, setSpeed] = useState(50);
+          const [targetZone, setTargetZone] = useState({ x: 300, y: 250 });
+          const [impactPoint, setImpactPoint] = useState(null);
+          const [badge, setBadge] = useState(null);
+          const [factCard, setFactCard] = useState(null);
+          const [totalScore, setTotalScore] = useState(0);
+          const [attempts, setAttempts] = useState(0);
+          const canvasRef = useRef(null);
+
+          const asteroidTypes = {
+            rock: { name: 'Rocky', color: '#8B4513', density: 3, emoji: '🪨' },
+            ice: { name: 'Icy', color: '#87CEEB', density: 1, emoji: '❄️' },
+            metal: { name: 'Metallic', color: '#C0C0C0', density: 8, emoji: '⚙️' }
+          };
+
+          const facts = [
+            "Rocky asteroids are the most common type in our solar system!",
+            "Icy asteroids often vaporize before reaching Earth's surface.",
+            "Metallic asteroids contain valuable minerals like iron and nickel.",
+            "NASA tracks over 30,000 near-Earth asteroids to keep us safe!",
+            "The Chicxulub asteroid (which ended the dinosaurs) was about 10 km wide.",
+            "Most asteroids burn up harmlessly in Earth's atmosphere every day!",
+            "Asteroid 2008 TC3 was successfully predicted before impact in Sudan in 2008!",
+            "The asteroid belt contains millions of rocky objects between Mars and Jupiter.",
+            "Some asteroids are actually 'rubble piles' held together by gravity.",
+            "NASA's DART mission successfully changed an asteroid's orbit in 2022!",
+            "Asteroids travel through space at speeds of 25,000 to 160,000 km/h!",
+            "The largest asteroid is Ceres, which is about 940 km in diameter.",
+            "Scientists estimate there are over 1 million asteroids larger than 1 km!",
+            "Asteroids can have their own moons called moonlets.",
+            "The word 'asteroid' means 'star-like' in Greek."
+          ];
+
+          const badges = {
+            rookie: { name: "Space Rookie", icon: "🚀", desc: "First launch!" },
+            defender: { name: "Earth Defender", icon: "🛡️", desc: "Minimal impact!" },
+            master: { name: "Impact Master", icon: "🎯", desc: "Bullseye hit!" },
+            scientist: { name: "NASA Ally", icon: "🔬", desc: "Tried all types!" }
+          };
+
+          useEffect(() => {
+            if (gameState === 'launching' && canvasRef.current) {
+              const canvas = canvasRef.current;
+              const ctx = canvas.getContext('2d');
+              let frame = 0;
+              const maxFrames = 60;
+              let animationId;
+
+              const animate = () => {
+                frame++;
+                const progress = frame / maxFrames;
+                
+                ctx.fillStyle = '#0a0a1a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                for (let i = 0; i < 50; i++) {
+                  ctx.fillStyle = 'white';
+                  ctx.beginPath();
+                  ctx.arc((i * 37) % canvas.width, (i * 73) % canvas.height, 1, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+
+                const earthX = canvas.width / 2;
+                const earthY = canvas.height - 100;
+                ctx.fillStyle = '#4169E1';
+                ctx.beginPath();
+                ctx.arc(earthX, earthY, 80, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(earthX - 30, earthY - 20, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(earthX + 40, earthY + 10, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(targetZone.x, targetZone.y, 30, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const startX = 50;
+                const startY = 50;
+                const asteroidX = startX + (targetZone.x - startX) * progress;
+                const asteroidY = startY + (targetZone.y - startY) * progress + Math.sin(progress * Math.PI) * 50;
+
+                for (let i = 0; i < 5; i++) {
+                  const trailProgress = Math.max(0, progress - i * 0.05);
+                  const trailX = startX + (targetZone.x - startX) * trailProgress;
+                  const trailY = startY + (targetZone.y - startY) * trailProgress + Math.sin(trailProgress * Math.PI) * 50;
+                  const opacity = Math.floor((1 - i * 0.2) * 255).toString(16).padStart(2, '0');
+                  ctx.fillStyle = asteroidTypes[asteroidType].color + opacity;
+                  ctx.beginPath();
+                  ctx.arc(trailX, trailY, asteroidSize / 10, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+
+                ctx.fillStyle = asteroidTypes[asteroidType].color;
+                ctx.beginPath();
+                ctx.arc(asteroidX, asteroidY, asteroidSize / 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (progress > 0.95) {
+                  const impactSize = (progress - 0.95) * 20 * (asteroidSize / 50);
+                  ctx.strokeStyle = '#FF6347';
+                  ctx.lineWidth = 4;
+                  for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(asteroidX, asteroidY, impactSize * 10 * (i + 1), 0, Math.PI * 2);
+                    ctx.stroke();
+                  }
+                  
+                  for (let i = 0; i < 12; i++) {
+                    const sparkAngle = (i / 12) * Math.PI * 2;
+                    const sparkDist = impactSize * 15;
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath();
+                    ctx.arc(
+                      asteroidX + Math.cos(sparkAngle) * sparkDist,
+                      asteroidY + Math.sin(sparkAngle) * sparkDist,
+                      3,
+                      0,
+                      Math.PI * 2
+                    );
+                    ctx.fill();
+                  }
+                }
+
+                if (frame < maxFrames) {
+                  animationId = requestAnimationFrame(animate);
+                } else {
+                  setImpactPoint({ x: asteroidX, y: asteroidY });
+                  calculateScore(asteroidX, asteroidY);
+                }
+              };
+
+              animate();
+
+              return () => {
+                if (animationId) {
+                  cancelAnimationFrame(animationId);
+                }
+              };
+            }
+          }, [gameState, asteroidType, asteroidSize, targetZone]);
+
+          const calculateScore = (impactX, impactY) => {
+            const distance = Math.sqrt(
+              Math.pow(impactX - targetZone.x, 2) + 
+              Math.pow(impactY - targetZone.y, 2)
+            );
+            
+            let points = 0;
+            points += asteroidSize * 10;
+            const accuracyBonus = Math.max(0, 500 - distance * 5);
+            points += accuracyBonus;
+            const angleDifficulty = Math.abs(angle - 45) / 45;
+            points += angleDifficulty * 300;
+            const typeMultiplier = asteroidTypes[asteroidType].density / 3;
+            points = Math.floor(points * typeMultiplier);
+            
+            setScore(points);
+            setTotalScore(prev => prev + points);
+            const newAttempts = attempts + 1;
+            setAttempts(newAttempts);
+            
+            if (newAttempts === 1) {
+              setBadge(badges.rookie);
+            } else if (distance < 30) {
+              setBadge(badges.master);
+            } else if (asteroidSize < 30) {
+              setBadge(badges.defender);
+            }
+            
+            setFactCard(facts[Math.floor(Math.random() * facts.length)]);
+            setGameState('results');
+          };
+
+          const launch = () => {
+            setGameState('launching');
+            setBadge(null);
+            setFactCard(null);
+            setTargetZone({
+              x: 200 + Math.random() * 200,
+              y: 180 + Math.random() * 140
+            });
+          };
+
+          const reset = () => {
+            setGameState('setup');
+            setScore(0);
+            setImpactPoint(null);
+          };
+
+          return (
+            <div className="min-h-screen bg-gradient-to-b from-purple-900 via-blue-900 to-black text-white p-4 md:p-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl md:text-5xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500">
+                    ASTEROID IMPACT ARCADE
+                  </h1>
+                  <p className="text-lg md:text-xl text-blue-300">Learn Science • Have Fun • Save (or Hit) Earth! 🌍</p>
+                </div>
+
+                <div className="flex flex-wrap justify-between items-center mb-6 bg-black bg-opacity-50 p-4 rounded-lg gap-4">
+                  <div className="flex gap-4 md:gap-6">
+                    <div className="text-center">
+                      <div className="text-xs md:text-sm text-gray-400">LAST SCORE</div>
+                      <div className="text-2xl md:text-3xl font-bold text-yellow-400">{score}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs md:text-sm text-gray-400">TOTAL</div>
+                      <div className="text-2xl md:text-3xl font-bold text-green-400">{totalScore}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs md:text-sm text-gray-400">ATTEMPTS</div>
+                      <div className="text-2xl md:text-3xl font-bold text-blue-400">{attempts}</div>
+                    </div>
+                  </div>
+                  {badge && (
+                    <div className="bg-yellow-500 bg-opacity-20 border-2 border-yellow-500 rounded-lg p-3 animate-pulse">
+                      <div className="text-2xl md:text-3xl mb-1">{badge.icon}</div>
+                      <div className="font-bold text-xs md:text-sm">{badge.name}</div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="bg-gray-900 bg-opacity-80 p-4 md:p-6 rounded-xl border-2 border-blue-500">
+                    <h2 className="text-xl md:text-2xl font-bold mb-4 flex items-center gap-2">
+                      🎯 Mission Control
+                    </h2>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm mb-2 font-semibold">Asteroid Type</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {Object.keys(asteroidTypes).map(type => (
+                            <button
+                              key={type}
+                              onClick={() => setAsteroidType(type)}
+                              disabled={gameState !== 'setup'}
+                              className={`p-2 md:p-3 rounded-lg border-2 transition-all ${
+                                asteroidType === type
+                                  ? 'border-yellow-400 bg-yellow-500 bg-opacity-20 scale-105'
+                                  : 'border-gray-600 hover:border-gray-400'
+                              } ${gameState !== 'setup' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              <div className="text-xl md:text-2xl mb-1">{asteroidTypes[type].emoji}</div>
+                              <div className="text-xs font-medium">{asteroidTypes[type].name}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-2 font-semibold">
+                          Size: <span className="text-yellow-400">{asteroidSize}m</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={asteroidSize}
+                          onChange={(e) => setAsteroidSize(Number(e.target.value))}
+                          disabled={gameState !== 'setup'}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-2 font-semibold">
+                          Entry Angle: <span className="text-yellow-400">{angle}°</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="15"
+                          max="90"
+                          value={angle}
+                          onChange={(e) => setAngle(Number(e.target.value))}
+                          disabled={gameState !== 'setup'}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-2 font-semibold">
+                          Speed: <span className="text-yellow-400">{speed} km/s</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={speed}
+                          onChange={(e) => setSpeed(Number(e.target.value))}
+                          disabled={gameState !== 'setup'}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+
+                      {gameState === 'setup' && (
+                        <button
+                          onClick={launch}
+                          className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 py-3 px-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          <span className="text-xl">▶️</span> LAUNCH ASTEROID
+                        </button>
+                      )}
+
+                      {gameState === 'results' && (
+                        <button
+                          onClick={reset}
+                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 py-3 px-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          <span className="text-xl">🔄</span> TRY AGAIN
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 bg-gray-900 bg-opacity-80 p-4 md:p-6 rounded-xl border-2 border-purple-500">
+                    <canvas
+                      ref={canvasRef}
+                      width={600}
+                      height={400}
+                      className="w-full rounded-lg"
+                      style={{maxWidth: '100%', height: 'auto', aspectRatio: '3/2'}}
+                    />
+                  </div>
+                </div>
+
+                {gameState === 'results' && (
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                    <div className="bg-gradient-to-br from-yellow-500 to-orange-500 p-6 rounded-xl text-black shadow-2xl">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-3xl">🏆</span>
+                        <h3 className="text-xl md:text-2xl font-bold">Impact Score</h3>
+                      </div>
+                      <div className="text-5xl md:text-6xl font-bold mb-4">{score}</div>
+                      <div className="space-y-2 text-sm bg-black bg-opacity-20 p-4 rounded-lg">
+                        <div className="flex justify-between">
+                          <span>✓ Size Score:</span>
+                          <span className="font-bold">{asteroidSize * 10}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>✓ Accuracy Bonus:</span>
+                          <span className="font-bold">{Math.floor(Math.max(0, 500 - (impactPoint ? Math.sqrt(Math.pow(impactPoint.x - targetZone.x, 2) + Math.pow(impactPoint.y - targetZone.y, 2)) * 5 : 0)))}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>✓ Type ({asteroidTypes[asteroidType].name}):</span>
+                          <span className="font-bold">×{(asteroidTypes[asteroidType].density / 3).toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-6 rounded-xl shadow-2xl">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-3xl">📚</span>
+                        <h3 className="text-xl md:text-2xl font-bold">Science Fact!</h3>
+                      </div>
+                      <p className="text-base md:text-lg leading-relaxed bg-black bg-opacity-20 p-4 rounded-lg">{factCard}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 bg-gray-900 bg-opacity-80 p-4 md:p-6 rounded-xl border-2 border-green-500">
+                  <h3 className="text-lg md:text-xl font-bold mb-3">🎯 Today's Challenges</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-500 bg-opacity-20 p-4 rounded-lg border border-blue-400 hover:bg-opacity-30 transition-all">
+                      <div className="font-bold mb-1 text-blue-300">🌊 Ocean Strike</div>
+                      <div className="text-sm text-gray-300">Hit the blue zones on Earth</div>
+                    </div>
+                    <div className="bg-green-500 bg-opacity-20 p-4 rounded-lg border border-green-400 hover:bg-opacity-30 transition-all">
+                      <div className="font-bold mb-1 text-green-300">📊 NASA Data Match</div>
+                      <div className="text-sm text-gray-300">Use a 60m rocky asteroid</div>
+                    </div>
+                    <div className="bg-yellow-500 bg-opacity-20 p-4 rounded-lg border border-yellow-400 hover:bg-opacity-30 transition-all">
+                      <div className="font-bold mb-1 text-yellow-300">🛡️ Atmosphere Skim</div>
+                      <div className="text-sm text-gray-300">Small asteroid, low angle</div>
+                    </div>
+                  </div>
+                </div>
+
+                <footer className="mt-8 text-center text-gray-400 text-sm">
+                  <p>Educational game created for science learning • Data inspired by NASA research</p>
+                </footer>
+              </div>
+            </div>
+          );
+        };
+
+        ReactDOM.render(<AsteroidArcade />, document.getElementById('root'));
+    </script>
+</body>
+</html>
